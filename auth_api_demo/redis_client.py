@@ -1,40 +1,30 @@
-import os
 import logging
-import threading
-import time
-import fnmatch
+
 import redis
 
-logger = logging.getLogger("auth_api_demo")
+from .config import settings
 
-
-# Configuration
-REDIS_URL = os.getenv("REDIS_URL")
-REDIS_HOST = os.getenv("REDIS_HOST", "127.0.0.1")
-REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
-REDIS_DB = int(os.getenv("REDIS_DB", 0))
+logger = logging.getLogger(__name__)
 
 # Initialize Client
+if settings.REDIS_URL:
+    # Use full URL connection (useful for Upstash, Heroku, Render, etc.)
+    redis_client = redis.Redis.from_url(
+        settings.REDIS_URL, decode_responses=True, socket_connect_timeout=3.0
+    )
+else:
+    # Fallback to host/port
+    redis_client = redis.Redis(
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
+        db=settings.REDIS_DB,
+        decode_responses=True,  # Automatically decode bytes to strings
+        socket_connect_timeout=1.5,
+    )
+
 try:
-    # Try to connect to Redis
-    if REDIS_URL:
-        # Use full URL connection (useful for Upstash, Heroku, Render, etc.)
-        redis_client = redis.Redis.from_url(
-            REDIS_URL,
-            decode_responses=True,
-            socket_connect_timeout=3.0
-        )
-    else:
-        # Fallback to host/port
-        redis_client = redis.Redis(
-            host=REDIS_HOST,
-            port=REDIS_PORT,
-            db=REDIS_DB,
-            decode_responses=True,  # Automatically decode bytes to strings
-            socket_connect_timeout=1.5
-        )
     redis_client.ping()
     logger.info("Successfully connected to Redis server.")
 except Exception as e:
     logger.error(f"Failed to connect to Redis: {e}")
-    redis_client = MockRedis()
+    raise

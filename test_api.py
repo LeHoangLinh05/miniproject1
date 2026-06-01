@@ -1,29 +1,27 @@
-import urllib.request
-import urllib.error
 import json
-import subprocess
-import time
-import sys
 import os
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
 
 API_URL = "http://127.0.0.1:8000"
+
 
 def make_request(url, method="GET", data=None, headers=None):
     if headers is None:
         headers = {}
-    
+
     req_data = None
     if data is not None:
         req_data = json.dumps(data).encode("utf-8")
         headers["Content-Type"] = "application/json"
-        
+
     req = urllib.request.Request(
-        f"{API_URL}{url}",
-        data=req_data,
-        headers=headers,
-        method=method
+        f"{API_URL}{url}", data=req_data, headers=headers, method=method
     )
-    
+
     try:
         with urllib.request.urlopen(req) as response:
             status_code = response.status
@@ -42,9 +40,10 @@ def make_request(url, method="GET", data=None, headers=None):
             content = body
         return status_code, content
 
+
 def run_tests():
     print("=== STARTING API TESTS ===")
-    
+
     # 1. Test Ping
     print("\n1. Testing GET /ping...")
     status, res = make_request("/ping", "GET")
@@ -59,7 +58,7 @@ def run_tests():
     admin_payload = {
         "email": "admin@example.com",
         "password": "adminpassword",
-        "role": "admin"
+        "role": "admin",
     }
     status, res = make_request("/register", "POST", data=admin_payload)
     print(f"Status: {status} | Response: {res}")
@@ -71,7 +70,7 @@ def run_tests():
     user_payload = {
         "email": "user@example.com",
         "password": "userpassword",
-        "role": "user"
+        "role": "user",
     }
     status, res = make_request("/register", "POST", data=user_payload)
     print(f"Status: {status} | Response: {res}")
@@ -81,14 +80,11 @@ def run_tests():
 
     # 4. Test Login
     print("\n4. Testing POST /login...")
-    login_payload = {
-        "email": "user@example.com",
-        "password": "userpassword"
-    }
+    login_payload = {"email": "user@example.com", "password": "userpassword"}
     status, res = make_request("/login", "POST", data=login_payload)
     print(f"Status: {status} | Response keys: {list(res.keys())}")
     assert status == 200, "Login failed"
-    
+
     access_token = res["access_token"]
     refresh_token = res["refresh_token"]
     print("-> Login Succeeded!")
@@ -121,14 +117,11 @@ def run_tests():
 
     # 8. Test Admin Login and Admin access
     print("\n8. Testing Admin Login...")
-    admin_login_payload = {
-        "email": "admin@example.com",
-        "password": "adminpassword"
-    }
+    admin_login_payload = {"email": "admin@example.com", "password": "adminpassword"}
     status, admin_res = make_request("/login", "POST", data=admin_login_payload)
     print(f"Status: {status}")
     assert status == 200, "Admin login failed"
-    
+
     admin_headers = {"Authorization": f"Bearer {admin_res['access_token']}"}
 
     print("\n8b. Testing GET /users/all as admin (Should succeed)...")
@@ -159,7 +152,9 @@ def run_tests():
     print("\n10. Testing POST /logout...")
     logout_payload = {"refresh_token": new_refresh_token}
     logout_headers = {"Authorization": f"Bearer {new_access_token}"}
-    status, res = make_request("/logout", "POST", data=logout_payload, headers=logout_headers)
+    status, res = make_request(
+        "/logout", "POST", data=logout_payload, headers=logout_headers
+    )
     print(f"Status: {status} | Response: {res}")
     assert status == 200, "Logout failed"
     print("-> Logout Succeeded!")
@@ -172,7 +167,7 @@ def run_tests():
     print("-> Logged-out token rejection verified!")
 
     # 12. Check status after logout
-    print(f"\n12. Testing user status after logout...")
+    print("\n12. Testing user status after logout...")
     status, res = make_request(f"/users/{user_id}/status", "GET", headers=admin_headers)
     print(f"Status: {status} | Response: {json.dumps(res, indent=2)}")
     assert status == 200, "Status query failed"
@@ -181,23 +176,28 @@ def run_tests():
 
     print("\n=== ALL TESTS PASSED SUCCESSFULLY! ===")
 
+
 if __name__ == "__main__":
     # Delete existing SQLite database if it exists to start fresh (only if not already running)
     # Check if server is already running first
     server_already_running = False
     try:
-        req = urllib.request.Request(f"http://127.0.0.1:8000/ping", method="GET")
+        req = urllib.request.Request("http://127.0.0.1:8000/ping", method="GET")
         with urllib.request.urlopen(req, timeout=1.0) as conn:
             if conn.read().decode("utf-8") == "pong":
                 server_already_running = True
-                print("Detected uvicorn server already running on port 8000. Running tests against it...")
+                print(
+                    "Detected uvicorn server already running on port 8000. Running tests against it..."
+                )
     except Exception:
         pass
 
     if not server_already_running and os.path.exists("auth_demo.db"):
         try:
             os.remove("auth_demo.db")
-            print("Removed existing test database 'auth_demo.db' before starting the server.")
+            print(
+                "Removed existing test database 'auth_demo.db' before starting the server."
+            )
         except Exception as e:
             print(f"Warning: Could not remove db file: {e}")
 
@@ -205,13 +205,22 @@ if __name__ == "__main__":
         print("Starting uvicorn server in background...")
         python_exe = "python"
         server_process = subprocess.Popen(
-            [python_exe, "-m", "uvicorn", "auth_api_demo.main:app", "--host", "127.0.0.1", "--port", "8000"]
+            [
+                python_exe,
+                "-m",
+                "uvicorn",
+                "auth_api_demo.main:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8000",
+            ]
         )
-        
+
         # Wait for the server to start up by polling /ping
         server_ready = False
         print("Waiting for server to become responsive...")
-        for i in range(15):
+        for _ in range(15):
             time.sleep(1.0)
             try:
                 req = urllib.request.Request(f"{API_URL}/ping", method="GET")
@@ -221,12 +230,12 @@ if __name__ == "__main__":
                         break
             except Exception:
                 pass
-                
+
         if not server_ready:
             print("Error: Uvicorn server failed to start within 15 seconds or crashed.")
             server_process.terminate()
             sys.exit(1)
-        
+
         try:
             run_tests()
         finally:

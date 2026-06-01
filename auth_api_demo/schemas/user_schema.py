@@ -1,13 +1,18 @@
-from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
-from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
 
 class UserBase(BaseModel):
-    email: str = Field(..., description="The user's email address")
+    email: EmailStr = Field(..., description="The user's email address")
+
 
 class UserCreate(UserBase):
-    password: str = Field(..., min_length=6, description="Password must be at least 6 characters long")
-    role: Optional[str] = Field("user", description="Role: 'user' or 'admin'")
+    password: str = Field(
+        ..., min_length=6, description="Password must be at least 6 characters long"
+    )
+    role: str | None = Field("user", description="Role: 'user' or 'admin'")
+
 
 class UserResponse(UserBase):
     id: int
@@ -16,13 +21,15 @@ class UserResponse(UserBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class UserStatusResponse(BaseModel):
     user_id: int
-    email: str
+    email: EmailStr
     role: str
     is_online: bool
-    last_active_at: Optional[datetime] = None
-    offline_minutes: Optional[float] = None
+    last_active_at: datetime | None = None
+    offline_minutes: float | None = None
+
+    model_config = ConfigDict(from_attributes=True)
