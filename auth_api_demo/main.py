@@ -2,7 +2,6 @@ import logging
 import os
 import time
 
-# Manual .env file loader
 if os.path.exists(".env"):
     with open(".env", encoding="utf-8") as f:
         for line in f:
@@ -17,7 +16,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -28,17 +26,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger("auth_api_demo")
 
-# Import database engine and base
 from .database import Base, engine
 
 # Import models to ensure they are registered before create_all
 
-# Initialize database tables
 logger.info("Initializing database tables...")
 Base.metadata.create_all(bind=engine)
 logger.info("Database tables initialized successfully.")
 
-# Initialize FastAPI app
 app = FastAPI(
     title="FastAPI Auth & Activity Tracking API",
     description="A secure Web API with JWT Auth, SQLite, and online/offline status tracking.",
@@ -55,7 +50,6 @@ app.add_middleware(
 )
 
 
-# Custom Exception Handlers for standard REST Responses
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     logger.warning(
@@ -95,7 +89,6 @@ async def general_exception_handler(request: Request, exc: Exception):
     )
 
 
-# Request/Response Logging Middleware
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
@@ -108,15 +101,12 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-# Import routers
 from .routers import auth, users
 
-# Register routers
 app.include_router(auth.router)
 app.include_router(users.router)
 
 
-# Health Check Route
 @app.get("/ping", response_class=PlainTextResponse)
 def ping():
     """
