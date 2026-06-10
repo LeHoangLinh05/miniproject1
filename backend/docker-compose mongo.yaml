@@ -1,0 +1,22 @@
+version: "3.9"
+services:
+  my-mongodb:
+    image: mongo:5.0.6
+    container_name: mongo-gateway
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_DATABASE=logjava_test
+      - MONGO_INITDB_ROOT_USERNAME=admin # Thiết lập user root
+      - MONGO_INITDB_ROOT_PASSWORD=admin1001
+      - TZ=Asia/Ho_Chi_Minh
+    volumes:
+      # thư mục lưu data và file config
+      - ./mongodb:/data/db
+      - ./mongoconfig:/data/configdb
+    networks:
+      - ten_network
+networks:
+  ten_network:
+    name: ten_network
+    driver: bridge

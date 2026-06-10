@@ -1,0 +1,76 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: miniproject1-frontend
+    ports:
+      - 8080:3000
+    env_file:
+      - ./frontend/.env
+    environment:
+      # Rewrite /api/* trong next.config.ts — phải dùng tên service Docker, KHÔNG dùng localhost
+      NEXT_PUBLIC_API_URL: http://backend:8000
+      INTERNAL_API_URL: http://backend:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - internal
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: miniproject1-backend
+    ports:
+      - 8000:8000
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  postgres:
+    image: postgres:17
+    container_name: miniproject1-postgres
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  nginx:
+    build:
+      context: ./nginx
+    container_name: miniproject1-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  postgres-data:
+
+
+

@@ -8,7 +8,9 @@ if os.path.exists(".env"):
             line = line.strip()
             if line and not line.startswith("#") and "=" in line:
                 key, val = line.split("=", 1)
-                os.environ[key.strip()] = val.strip().strip('"').strip("'")
+                key_str = key.strip()
+                if key_str not in os.environ:
+                    os.environ[key_str] = val.strip().strip('"').strip("'")
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -26,13 +28,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("auth_api_demo")
 
-from .database import Base, engine
-
-# Import models to ensure they are registered before create_all
-
-logger.info("Initializing database tables...")
-Base.metadata.create_all(bind=engine)
-logger.info("Database tables initialized successfully.")
+API_PREFIX = "/api"
 
 app = FastAPI(
     title="FastAPI Auth & Activity Tracking API",
@@ -40,10 +36,21 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Enable CORS for frontend integrations (e.g. Next.js in future weeks)
+# Enable CORS for frontend integrations
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://127.0.0.1:3000",
+        "http://localhost:8080",
+        "https://localhost:8080",
+        "http://127.0.0.1:8080",
+        "https://127.0.0.1:8080",
+        "http://15.135.194.148",
+        "https://15.135.194.148",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -103,11 +110,11 @@ async def log_requests(request: Request, call_next):
 
 from .routers import auth, users
 
-app.include_router(auth.router)
-app.include_router(users.router)
+app.include_router(auth.router, prefix=API_PREFIX)
+app.include_router(users.router, prefix=API_PREFIX)
 
 
-@app.get("/ping", response_class=PlainTextResponse)
+@app.get(f"{API_PREFIX}/ping", response_class=PlainTextResponse)
 def ping():
     """
     Simple health check route to verify environment.

@@ -1,0 +1,84 @@
+services:
+  # ─────────────────────────────────────────────
+  # DATABASE
+  # ─────────────────────────────────────────────
+  postgres:
+    image: postgres:17-alpine
+    container_name: miniproject1-postgres
+    restart: always
+    env_file:
+      - ./backend/.env
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    # Không expose port 5432 ra ngoài – chỉ backend được kết nối nội bộ
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  # ─────────────────────────────────────────────
+  # BACKEND (FastAPI / Gunicorn + Uvicorn)
+  # ─────────────────────────────────────────────
+  backend:
+    image: lehoanglinh05/miniproject1-app-backend:latest
+    container_name: miniproject1-backend
+    restart: always
+    env_file:
+      - ./backend/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/ping')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Không expose port ra ngoài – Nginx proxy nội bộ vào port 8000
+    networks:
+      - internal
+
+  # ─────────────────────────────────────────────
+  # FRONTEND (Next.js standalone)
+  # ─────────────────────────────────────────────
+  frontend:
+    image: lehoanglinh05/miniproject1-app-frontend:latest
+    container_name: miniproject1-frontend
+    restart: always
+    depends_on:
+      - backend
+    # Không expose port ra ngoài – Nginx proxy nội bộ vào port 3000
+    networks:
+      - internal
+
+  # ─────────────────────────────────────────────
+  # NGINX (Reverse Proxy + SSL termination)
+  # ─────────────────────────────────────────────
+  nginx:
+    image: lehoanglinh05/miniproject1-app-nginxproxy:latest
+    container_name: miniproject1-nginx
+    restart: always
+    ports:
+      - "80:80"       # HTTP → tự redirect sang HTTPS
+      - "443:443"     # HTTPS
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - internal
+
+# ─────────────────────────────────────────────
+# VOLUMES – Persistent data cho PostgreSQL
+# ─────────────────────────────────────────────
+volumes:
+  postgres-data:
+
+# ─────────────────────────────────────────────
+# NETWORKS – Mạng nội bộ, cô lập khỏi host
+# ─────────────────────────────────────────────
+networks:
+  internal:
+    driver: bridge

@@ -1,0 +1,37 @@
+version: "3.0"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: miniproject1-app
+
+    ports:
+      - 8000:8000
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./:/app
+
+    depends_on:
+      - postgres
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+  postgres:
+    image: postgres:17
+
+    container_name: postgres-db
+
+    env_file:
+      - .env
+
+    ports:
+      - 5432:5432
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:
+

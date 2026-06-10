@@ -71,14 +71,19 @@ auth_api_demo/
    pip install -r auth_api_demo/requirements.txt
    ```
 
-4. **Start the API Server**:
-   From the parent directory (`d:\miniproject1`), run:
+4. **Run database migrations** (from `backend/`):
    ```bash
-   uvicorn auth_api_demo.main:app --reload
+   cd backend
+   alembic upgrade head
    ```
-   *Note: If running directly inside the `auth_api_demo` directory, run: `uvicorn main:app --reload` instead.*
 
-5. **Access API Documentation**:
+5. **Start the API Server**:
+   From the `backend/` directory, run:
+   ```bash
+   uvicorn auth_api_demo.main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+6. **Access API Documentation**:
    Open your browser to: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) (Swagger UI) or [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc) (ReDoc).
 
 ---
@@ -87,14 +92,14 @@ auth_api_demo/
 
 | Endpoint | Method | Description | Auth Required |
 |---|---|---|---|
-| `/ping` | GET | Verification endpoint. Returns `"pong"`. | ✗ |
-| `/register` | POST | Register new account (params: `email`, `password`, `role`). | ✗ |
-| `/login` | POST | Login and receive `access_token` & `refresh_token`. | ✗ |
-| `/token/refresh`| POST | Rotate and issue a new `access_token` & `refresh_token`. | ✗ |
-| `/logout` | POST | Logout a user. Blacklists their refresh token. | ✓ |
-| `/users/me` | GET | Retrieve logged-in user profile with online status. | ✓ |
-| `/users/all` | GET | Retrieve list of all users and status (**Admin Only**). | ✓ (Admin) |
-| `/users/{id}/status`| GET| Retrieve detailed online/offline status of a user. | ✓ |
+| `/api/ping` | GET | Verification endpoint. Returns `"pong"`. | ✗ |
+| `/api/register` | POST | Register new account (params: `email`, `password`, `role`). | ✗ |
+| `/api/login` | POST | Login and receive `access_token` & `refresh_token`. | ✗ |
+| `/api/token/refresh`| POST | Rotate and issue a new `access_token` & `refresh_token`. | ✗ |
+| `/api/logout` | POST | Logout a user. Blacklists their refresh token. | ✓ |
+| `/api/users/me` | GET | Retrieve logged-in user profile with online status. | ✓ |
+| `/api/users/all` | GET | Retrieve list of all users and status (**Admin Only**). | ✓ (Admin) |
+| `/api/users/{id}/status`| GET| Retrieve detailed online/offline status of a user. | ✓ |
 
 ---
 
@@ -104,7 +109,7 @@ Here are commands to test the API directly using PowerShell.
 
 ### 1. Ping Check
 ```powershell
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/ping" -Method Get
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/ping" -Method Get
 ```
 
 ### 2. Register Users
@@ -116,7 +121,7 @@ $adminBody = @{
     role = "admin"
 } | ConvertTo-Json
 
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/register" -Method Post -Body $adminBody -ContentType "application/json"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/register" -Method Post -Body $adminBody -ContentType "application/json"
 ```
 
 Register a **Regular User**:
@@ -127,7 +132,7 @@ $userBody = @{
     role = "user"
 } | ConvertTo-Json
 
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/register" -Method Post -Body $userBody -ContentType "application/json"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/register" -Method Post -Body $userBody -ContentType "application/json"
 ```
 
 ### 3. Log In (Get Tokens)
@@ -138,7 +143,7 @@ $loginBody = @{
     password = "userpassword"
 } | ConvertTo-Json
 
-$tokens = Invoke-RestMethod -Uri "http://127.0.0.1:8000/login" -Method Post -Body $loginBody -ContentType "application/json"
+$tokens = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/login" -Method Post -Body $loginBody -ContentType "application/json"
 $tokens | Format-List
 ```
 This stores the access token in `$tokens.access_token` and the refresh token in `$tokens.refresh_token`.
@@ -146,20 +151,20 @@ This stores the access token in `$tokens.access_token` and the refresh token in 
 ### 4. Fetch Current User Profile
 ```powershell
 $headers = @{ Authorization = "Bearer $($tokens.access_token)" }
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/users/me" -Method Get -Headers $headers
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/users/me" -Method Get -Headers $headers
 ```
 
 ### 5. Check User Status (Creative Feature)
 Wait a few seconds, then check the user's status details:
 ```powershell
 # Check user 2 status (standard user)
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/users/2/status" -Method Get -Headers $headers
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/users/2/status" -Method Get -Headers $headers
 ```
 
 ### 6. Admin User List (Should fail for standard user, succeed for admin)
 Try checking with the standard user token (should return `403 Forbidden`):
 ```powershell
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/users/all" -Method Get -Headers $headers
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/users/all" -Method Get -Headers $headers
 ```
 
 Log in as the admin:
@@ -169,11 +174,11 @@ $adminLoginBody = @{
     password = "adminpassword"
 } | ConvertTo-Json
 
-$adminTokens = Invoke-RestMethod -Uri "http://127.0.0.1:8000/login" -Method Post -Body $adminLoginBody -ContentType "application/json"
+$adminTokens = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/login" -Method Post -Body $adminLoginBody -ContentType "application/json"
 $adminHeaders = @{ Authorization = "Bearer $($adminTokens.access_token)" }
 
 # Retrieve user list with statuses
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/users/all" -Method Get -Headers $adminHeaders | ConvertTo-Json
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/users/all" -Method Get -Headers $adminHeaders | ConvertTo-Json
 ```
 
 ### 7. Refresh Access Token (Token Rotation)
@@ -182,7 +187,7 @@ $refreshBody = @{
     refresh_token = $tokens.refresh_token
 } | ConvertTo-Json
 
-$newTokens = Invoke-RestMethod -Uri "http://127.0.0.1:8000/token/refresh" -Method Post -Body $refreshBody -ContentType "application/json"
+$newTokens = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/token/refresh" -Method Post -Body $refreshBody -ContentType "application/json"
 $newTokens | Format-List
 ```
 
@@ -194,10 +199,10 @@ $logoutBody = @{
 } | ConvertTo-Json
 
 $logoutHeaders = @{ Authorization = "Bearer $($newTokens.access_token)" }
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/logout" -Method Post -Body $logoutBody -ContentType "application/json" -Headers $logoutHeaders
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/logout" -Method Post -Body $logoutBody -ContentType "application/json" -Headers $logoutHeaders
 ```
 
 Try using the logged-out refresh token again (should return `401 Unauthorized` due to blacklisting):
 ```powershell
-Invoke-RestMethod -Uri "http://127.0.0.1:8000/token/refresh" -Method Post -Body $logoutBody -ContentType "application/json"
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/token/refresh" -Method Post -Body $logoutBody -ContentType "application/json"
 ```

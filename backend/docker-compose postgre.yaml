@@ -1,0 +1,21 @@
+version: '3.0'
+services:
+  gateway-postgres:
+    container_name: pg-database
+    image: 'postgres:latest'
+    environment:
+      POSTGRES_USER: admin # Thiết lập user
+      POSTGRES_PASSWORD: admin@1001 #Thiết lập password
+      POSTGRES_DB: logjava # Thiết lập database 
+      PGDATA: /var/lib/postgresql/data # Nơi chứa data
+    volumes:
+      - './data/db:/data/db'
+      - './data/postgresql:/var/lib/postgresql/data'
+    ports:
+      - '5432:5432'
+    networks:
+      - logjava
+networks:
+  logjava:
+    name: logjava
+    driver: bridge

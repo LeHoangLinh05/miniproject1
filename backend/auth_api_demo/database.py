@@ -12,7 +12,11 @@ SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL
 is_sqlite = SQLALCHEMY_DATABASE_URL.startswith("sqlite")
 connect_args = {"check_same_thread": False} if is_sqlite else {}
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)
+engine_kwargs: dict[str, object] = {"connect_args": connect_args}
+if not is_sqlite:
+    engine_kwargs["pool_pre_ping"] = True
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL, **engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

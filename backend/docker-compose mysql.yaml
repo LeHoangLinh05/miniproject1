@@ -1,0 +1,16 @@
+version: "3.7"
+
+services:
+  mysql:
+    container_name: mysql
+    image: mysql:8.0
+    ports:
+      - 3306:3306
+    volumes:
+      - todo-mysql-data:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_DATABASE: sample
+volumes:
+  todo-mysql-data:
+
